@@ -1,4 +1,4 @@
-<img width="1879" height="905" alt="image" src="https://github.com/user-attachments/assets/b7543a77-7b17-4cff-a6ad-6850318d94d6" /># ⬡ Exchange Engine
+⬡ Exchange Engine
 
 A Stock trading simulator built with **Node.js**, **Express**, and **Redis**. This project features a high-performance backend and a trading-style web dashboard for real-time interaction.
 
