@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exchange Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --border: #1e1e2e;
+    --accent: #00ff88;
+    --accent2: #ff3366;
+    --text: #e8e8f0;
+    --muted: #555570;
+    --card: #13131f;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Space Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline effect */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,255,136,0.4);
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 20px;
+  }
+
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,255,136,0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(0,255,136,0); }
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 61px);
+  }
+
+  /* Sidebar */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .balance-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .balance-card::after {
+    content: '$';
+    position: absolute;
+    right: -10px;
+    bottom: -20px;
+    font-family: 'DM Serif Display', serif;
+    font-size: 100px;
+    color: rgba(0,255,136,0.04);
+    pointer-events: none;
+  }
+
+  .label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .balance-amount {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    text-shadow: 0 0 30px rgba(0,255,136,0.3);
+    transition: all 0.4s;
+  }
+
+  .btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    padding: 10px 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    width: 100%;
+  }
+
+  .btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,0.04); }
+  .btn.danger:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(255,51,102,0.04); }
+  .btn.primary { border-color: var(--accent); color: #0a0a0f; background: var(--accent); font-weight: 700; }
+  .btn.primary:hover { background: #00cc6e; }
+
+  .btn-group { display: flex; flex-direction: column; gap: 8px; }
+
+  /* Main content */
+  .content {
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Ticker strip */
+  .ticker-strip {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .ticker-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 120px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ticker-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .ticker-card.selected { border-color: var(--accent); background: rgba(0,255,136,0.05); }
+
+  .ticker-symbol { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .ticker-price { font-size: 18px; color: var(--accent); }
+  .ticker-change { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .ticker-change.up { color: var(--accent); }
+  .ticker-change.down { color: var(--accent2); }
+
+  /* Trade panel */
+  .trade-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+  }
+
+  .panel-title {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .trade-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+
+  .field label {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .field input, .field select {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 4px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+
+  .cost-preview {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+
+  .cost-preview span { color: var(--accent); font-weight: 700; }
+
+  /* History table */
+  .history-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    flex: 1;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(30,30,46,0.5);
+    transition: background 0.15s;
+    animation: fadeIn 0.3s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+  tbody td {
+    font-size: 12px;
+    padding: 12px;
+    color: var(--text);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .badge.buy { background: rgba(0,255,136,0.1); color: var(--accent); border: 1px solid rgba(0,255,136,0.2); }
+  .badge.sell { background: rgba(255,51,102,0.1); color: var(--accent2); border: 1px solid rgba(255,51,102,0.2); }
+
+  .empty { color: var(--muted); font-size: 12px; text-align: center; padding: 30px; }
+
+  /* Portfolio grid */
+  .portfolio-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+
+  .holding {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .holding .sym { font-weight: 700; color: var(--accent); }
+  .holding .qty { color: var(--muted); }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 20px;
+    font-size: 12px;
+    max-width: 300px;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 100;
+  }
+
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { border-color: var(--accent); color: var(--accent); }
+  #toast.error { border-color: var(--accent2); color: var(--accent2); }
+
+  .refresh-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px 8px;
+    transition: color 0.2s;
+  }
+  .refresh-btn:hover { color: var(--accent); }
+
+  .spinning { animation: spin 0.6s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .api-url {
+    font-size: 10px;
+    color: var(--muted);
+    border: 1px dashed var(--border);
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-top: 4px;
+  }
+
+  .api-url input {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    background: none;
+    border: none;
+    color: var(--text);
+    outline: none;
+    width: calc(100% - 50px);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⬡ EXCHANGE ENGINE</div>
+  <div style="display:flex;gap:12px;align-items:center">
+    <div class="api-url">
+      API: <input id="apiUrl" value="http://localhost:3000" />
+    </div>
+    <div class="status-pill"><div class="dot" id="statusDot"></div><span id="statusText">CONNECTING</span></div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="balance-card">
+      <div class="label">Cash Balance</div>
+      <div class="balance-amount" id="balance">$—</div>
+    </div>
+
+    <div>
+      <div class="label" style="margin-bottom:8px">Portfolio</div>
+      <div class="portfolio-grid" id="portfolio">
+        <div class="empty">No holdings</div>
+      </div>
+    </div>
+
+    <div class="btn-group" style="margin-top:auto">
+      <button class="btn" onclick="saveSnapshot()">💾 Save Snapshot</button>
+      <button class="btn danger" onclick="rollback()">↩ Rollback</button>
+      <button class="btn danger" style="border-color:#333" onclick="chaos()">☠ Chaos (kill server)</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Ticker strip -->
+    <div>
+      <div class="panel-title">Market <button class="refresh-btn" onclick="refreshTickers()" title="Refresh prices">⟳</button></div>
+      <div class="ticker-strip" id="tickers"></div>
+    </div>
+
+    <!-- Trade -->
+    <div class="trade-panel">
+      <div class="panel-title">Buy Order</div>
+      <div class="trade-form">
+        <div class="field">
+          <label>Symbol</label>
+          <input id="tradeSymbol" placeholder="AAPL" oninput="updateCost()" />
+        </div>
+        <div class="field">
+          <label>Shares</label>
+          <input id="tradeAmount" type="number" min="1" value="1" oninput="updateCost()" />
+        </div>
+        <div class="field">
+          <label>Price (USD)</label>
+          <input id="tradePrice" type="number" step="0.01" placeholder="0.00" oninput="updateCost()" />
+        </div>
+        <button class="btn primary" onclick="executeBuy()" style="white-space:nowrap">BUY →</button>
+      </div>
+      <div class="cost-preview" id="costPreview"></div>
+    </div>
+
+    <!-- History -->
+    <div class="history-panel">
+      <div class="panel-title">Transaction History <button class="refresh-btn" onclick="loadHistory()" title="Refresh">⟳</button></div>
+      <table>
+        <thead>
+          <tr>
+            <th>Type</th><th>Symbol</th><th>Shares</th><th>Price</th><th>Total</th><th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="6" class="empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const SYMBOLS = ['AAPL', 'TSLA', 'NVDA', 'MSFT', 'AMZN', 'META'];
+  let tickerPrices = {};
+
+  function api() { return document.getElementById('apiUrl').value.replace(/\/$/, ''); }
+
+  async function fetchJSON(path, opts = {}) {
+    const r = await fetch(api() + path, opts);
+    return r.json();
+  }
+
+  function toast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    setTimeout(() => el.className = '', 3000);
+  }
+
+  async function loadBalance() {
+    try {
+      const d = await fetchJSON('/balance');
+      const n = parseFloat(d.bank_balance);
+      document.getElementById('balance').textContent = '$' + n.toLocaleString('en-US', {minimumFractionDigits: 2});
+      document.getElementById('statusDot').style.background = 'var(--accent)';
+      document.getElementById('statusText').textContent = 'LIVE';
+    } catch {
+      document.getElementById('statusDot').style.background = 'var(--accent2)';
+      document.getElementById('statusText').textContent = 'OFFLINE';
+    }
+  }
+
+  async function loadPortfolio() {
+    try {
+      const d = await fetchJSON('/portfolio');
+      const el = document.getElementById('portfolio');
+      const entries = Object.entries(d.portfolio).filter(([, v]) => v > 0);
+      if (!entries.length) { el.innerHTML = '<div class="empty">No holdings</div>'; return; }
+      el.innerHTML = entries.map(([sym, qty]) =>
+        `<div class="holding"><span class="sym">${sym}</span><span class="qty">${qty} sh</span></div>`
+      ).join('');
+    } catch {}
+  }
+
+  async function loadHistory() {
+    try {
+      const d = await fetchJSON('/history');
+      const tbody = document.getElementById('historyBody');
+      if (!d.history.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No transactions yet</td></tr>'; return; }
+      tbody.innerHTML = d.history.map((tx, i) => `
+        <tr style="animation-delay:${i*40}ms">
+          <td><span class="badge ${tx.type.toLowerCase()}">${tx.type}</span></td>
+          <td>${tx.symbol}</td>
+          <td>${tx.amount}</td>
+          <td>$${tx.price.toFixed(2)}</td>
+          <td>$${tx.totalCost.toFixed(2)}</td>
+          <td style="color:var(--muted);font-size:11px">${new Date(tx.date).toLocaleString()}</td>
+        </tr>
+      `).join('');
+    } catch {}
+  }
+
+  async function refreshTickers() {
+    const el = document.getElementById('tickers');
+    el.innerHTML = SYMBOLS.map(s => `<div class="ticker-card" id="t-${s}">
+      <div class="ticker-symbol">${s}</div>
+      <div class="ticker-price"><span class="spinning">⟳</span></div>
+    </div>`).join('');
+
+    for (const sym of SYMBOLS) {
+      try {
+        const d = await fetchJSON(`/ticker/${sym}`);
+        const prev = tickerPrices[sym];
+        tickerPrices[sym] = d.price;
+        const change = prev ? ((d.price - prev) / prev * 100) : 0;
+        const card = document.getElementById(`t-${sym}`);
+        if (card) {
+          card.innerHTML = `
+            <div class="ticker-symbol">${sym}</div>
+            <div class="ticker-price">$${d.price.toFixed(2)}</div>
+            <div class="ticker-change ${change >= 0 ? 'up' : 'down'}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%</div>
+          `;
+          card.onclick = () => {
+            document.getElementById('tradeSymbol').value = sym;
+            document.getElementById('tradePrice').value = d.price.toFixed(2);
+            document.querySelectorAll('.ticker-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            updateCost();
+          };
+        }
+      } catch {}
+    }
+  }
+
+  function updateCost() {
+    const amt = parseFloat(document.getElementById('tradeAmount').value) || 0;
+    const price = parseFloat(document.getElementById('tradePrice').value) || 0;
+    const total = amt * price;
+    const el = document.getElementById('costPreview');
+    if (total > 0) {
+      el.innerHTML = `Total cost: <span>$${total.toLocaleString('en-US', {minimumFractionDigits:2})}</span>`;
+    } else {
+      el.innerHTML = '';
+    }
+  }
+
+  async function executeBuy() {
+    const symbol = document.getElementById('tradeSymbol').value.trim();
+    const amount = parseInt(document.getElementById('tradeAmount').value);
+    const price = parseFloat(document.getElementById('tradePrice').value);
+    if (!symbol || !amount || !price) { toast('Fill all fields', 'error'); return; }
+    try {
+      const d = await fetchJSON('/buy', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ symbol, amount, price })
+      });
+      if (d.status === 'success') {
+        toast(`✓ Bought ${amount} ${symbol} @ $${price}`);
+        await loadBalance(); await loadHistory(); await loadPortfolio();
+      } else {
+        toast(d.message || 'Trade failed', 'error');
+      }
+    } catch { toast('Server unreachable', 'error'); }
+  }
+
+  async function saveSnapshot() {
+    try {
+      await fetchJSON('/save', { method: 'POST' });
+      toast('✓ Snapshot saved');
+    } catch { toast('Failed', 'error'); }
+  }
+
+  async function rollback() {
+    if (!confirm('Rollback to last snapshot?')) return;
+    try {
+      const d = await fetchJSON('/rollback', { method: 'POST' });
+      toast(`↩ Rolled back to $${parseFloat(d.new_balance).toLocaleString()}`);
+      await loadBalance();
+    } catch { toast('No snapshot or server error', 'error'); }
+  }
+
+  async function chaos() {
+    if (!confirm('Kill the server process?')) return;
+    try { await fetchJSON('/chaos', { method: 'POST' }); } catch {}
+    toast('☠ Chaos triggered — server restarting…', 'error');
+  }
+
+  async function init() {
+    await Promise.all([loadBalance(), loadHistory(), loadPortfolio(), refreshTickers()]);
+    setInterval(() => { loadBalance(); loadHistory(); loadPortfolio(); }, 10000);
+  }
+
+  init();
+</script>
+</body>
+</html>

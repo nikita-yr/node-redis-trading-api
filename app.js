@@ -1,9 +1,15 @@
 const express = require('express');
 const redis = require('redis');
+const path = require('path');
 const app = express();
 
+// Middleware to parse JSON requests
 app.use(express.json());
 
+// Serve static files from the 'public' directory (HTML, CSS, JS)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Redis client configuration
 const client = redis.createClient({ 
     url: process.env.REDIS_URL || 'redis://redis:6379' 
 });
@@ -29,11 +35,11 @@ app.post('/buy', async (req, res) => {
         const currentBalance = await client.get('bank_balance');
         
         if (parseFloat(currentBalance) >= totalCost) {
-            // Rounds to 2 decimal places to avoid floating point math artifacts
+            // Deduct funds and update balance in Redis
             const newBalance = (parseFloat(currentBalance) - totalCost).toFixed(2);
             await client.set('bank_balance', newBalance);
 
-            // Push transaction details to a Redis list for history
+            // Record transaction details in a Redis list for history tracking
             await client.lPush('transactions', JSON.stringify({
                 type: 'BUY',
                 symbol: symbol.toUpperCase(),
@@ -54,19 +60,19 @@ app.post('/buy', async (req, res) => {
 
 // --- 3. ANALYTICS (PORTFOLIO & HISTORY) ---
 
-// Returns the current cash balance
+// Fetches the current bank balance from Redis
 app.get('/balance', async (req, res) => {
     const balance = await client.get('bank_balance');
     res.json({ bank_balance: balance });
 });
 
-// Returns the last 10 transactions from the history list
+// Retrieves the 10 most recent transactions
 app.get('/history', async (req, res) => {
     const logs = await client.lRange('transactions', 0, 9);
     res.json({ history: logs.map(log => JSON.parse(log)) });
 });
 
-// Calculates current holdings by iterating through the transaction history
+// Calculates the user's holdings based on transaction history
 app.get('/portfolio', async (req, res) => {
     const history = await client.lRange('transactions', 0, -1);
     const portfolio = {};
@@ -80,7 +86,7 @@ app.get('/portfolio', async (req, res) => {
 
 // --- 4. SYSTEM UTILITIES (STATE MANAGEMENT) ---
 
-// Creates a snapshot of the current balance for future rollback
+// Saves a backup of the current balance to Redis
 app.post('/save', async (req, res) => {
     const currentBalance = await client.get('bank_balance');
     await client.set('bank_snapshot', currentBalance);
@@ -98,7 +104,7 @@ app.post('/rollback', async (req, res) => {
     }
 });
 
-// Forces the process to exit to test Docker's restart policy
+// Simulates a server crash to test Docker's auto-restart capabilities
 app.post('/chaos', (req, res) => process.exit(1));
 
 // --- SERVER INITIALIZATION ---
@@ -107,12 +113,14 @@ async function start() {
     await client.connect();
     console.log('Connected to Redis');
     
-    // Initialize bank balance if it doesn't exist
+    // Set initial balance to $1,000,000 if the key is empty
     if (!(await client.get('bank_balance'))) {
         await client.set('bank_balance', 1000000);
     }
     
-    app.listen(3000, () => console.log('Exchange engine running on port 3000'));
+    app.listen(3000, () => {
+        console.log('Exchange engine running on http://localhost:3000');
+    });
 }
 
 start();
