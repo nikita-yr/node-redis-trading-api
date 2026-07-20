@@ -70,4 +70,4 @@ The dashboard will be available at `http://localhost:3000` (adjust if you've cha
 
 ## 📄 License
 
-MIT
+Licensed under the [MIT License](LICENSE).
