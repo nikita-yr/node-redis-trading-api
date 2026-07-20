@@ -48,3 +48,10 @@ Clone the repository and run the following command in the project root:
 
 ```bash
 docker-compose up --build
+
+## 📄 License
+
+MIT
+
+---
+
