@@ -1,9 +1,9 @@
 <h1 align="center">⬡ Exchange Engine</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/node.js-18+-green?logo=node.js&logoColor=white" alt="Node.js">
-  <img src="https://img.shields.io/badge/express-4.x-black?logo=express&logoColor=white" alt="Express">
-  <img src="https://img.shields.io/badge/redis-backed-red?logo=redis&logoColor=white" alt="Redis">
+  <img src="https://img.shields.io/badge/node.js-green?logo=node.js&logoColor=white" alt="Node.js">
+  <img src="https://img.shields.io/badge/express-4.18.2-black?logo=express&logoColor=white" alt="Express 4.18.2">
+  <img src="https://img.shields.io/badge/redis-4.6.10-red?logo=redis&logoColor=white" alt="Redis client 4.6.10">
   <img src="https://img.shields.io/badge/docker-ready-blue?logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
 </p>
